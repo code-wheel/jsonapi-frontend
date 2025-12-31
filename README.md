@@ -69,7 +69,7 @@ if (resolved.resolved && resolved.kind === "entity") {
 ### Next.js starter (optional)
 
 For a complete reference implementation (routing + rendering + media helpers), use the Next.js starter:
-https://github.com/CodeWheel-AI/jsonapi-frontend-next
+https://github.com/code-wheel/jsonapi-frontend-next
 
 ## Configuration
 
@@ -100,4 +100,4 @@ For deployment and migration examples, see `MIGRATION.md`.
 - Migration guide: `MIGRATION.md`
 - Changelog: `CHANGELOG.md`
 - NPM client: https://www.npmjs.com/package/@codewheel/jsonapi-frontend-client
-- Starter: https://github.com/CodeWheel-AI/jsonapi-frontend-next
+- Starter: https://github.com/code-wheel/jsonapi-frontend-next

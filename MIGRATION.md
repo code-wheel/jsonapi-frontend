@@ -87,7 +87,7 @@ Configure at `/admin/config/services/jsonapi-frontend`:
 You can use any framework. Two easy options:
 
 - TypeScript client (optional): `@codewheel/jsonapi-frontend-client`
-- Next.js starter (optional): https://github.com/CodeWheel-AI/jsonapi-frontend-next
+- Next.js starter (optional): https://github.com/code-wheel/jsonapi-frontend-next
 
 ### Split routing frontend env
 
