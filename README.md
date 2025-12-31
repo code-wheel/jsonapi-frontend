@@ -95,11 +95,6 @@ For deployment and migration examples, see `MIGRATION.md`.
 - The endpoint lives under `/jsonapi/` so it can share the same perimeter rules you apply to JSON:API.
 - If you run “frontend-first”, you can protect the Drupal origin with a shared secret header.
 
-## Not included (by design)
-
-- Preview/draft mode (use `drupal/next` if you need it)
-- Multi-site orchestration
-
 ## Links
 
 - Migration guide: `MIGRATION.md`
