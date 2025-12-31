@@ -3,6 +3,12 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-12-31
+
+### Changed
+
+- Docs: npm scope is now `@codewheel/*` (was `@codewheel-ai/*`)
+
 ## [1.0.0] - 2025-12-31
 
 ### Added
@@ -12,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional cache revalidation webhooks (frontend cache tags)
 - Optional integrations:
   - Next.js starter template (`jsonapi-frontend-next`)
-  - TypeScript client helpers (`@codewheel-ai/jsonapi-frontend-client`)
+  - TypeScript client helpers (`@codewheel/jsonapi-frontend-client`)
 - Resolver options:
   - Anonymous-only caching (configurable max-age)
   - Configurable langcode fallback when `langcode` is omitted (`site_default` or `current`)

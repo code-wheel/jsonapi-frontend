@@ -44,11 +44,11 @@ Typical successful entity resolution looks like:
 ### Option A: TypeScript client (optional)
 
 ```bash
-npm i @codewheel-ai/jsonapi-frontend-client
+npm i @codewheel/jsonapi-frontend-client
 ```
 
 ```ts
-import { resolvePath, fetchJsonApi } from "@codewheel-ai/jsonapi-frontend-client"
+import { resolvePath, fetchJsonApi } from "@codewheel/jsonapi-frontend-client"
 
 const resolved = await resolvePath("/about-us")
 if (resolved.resolved && resolved.kind === "entity") {
@@ -99,5 +99,5 @@ For deployment and migration examples, see `MIGRATION.md`.
 
 - Migration guide: `MIGRATION.md`
 - Changelog: `CHANGELOG.md`
-- NPM client: https://www.npmjs.com/package/@codewheel-ai/jsonapi-frontend-client
+- NPM client: https://www.npmjs.com/package/@codewheel/jsonapi-frontend-client
 - Starter: https://github.com/CodeWheel-AI/jsonapi-frontend-next
