@@ -127,7 +127,29 @@ Example (pages):
 curl "https://cms.example.com/jsonapi/node/page?filter[status]=1&fields[node--page]=path&page[limit]=50"
 ```
 
-In your Astro `getStaticPaths()`, map `data[].attributes.path.alias` into route params (split into path segments for a catch-all route), then render each page by calling `/jsonapi/resolve` and fetching the returned `jsonapi_url`.
+Example `getStaticPaths()` (for a catch-all route like `src/pages/[...slug].astro`):
+
+```ts
+export async function getStaticPaths() {
+  const baseUrl = import.meta.env.DRUPAL_BASE_URL
+  const url = new URL("/jsonapi/node/page", baseUrl)
+  url.searchParams.set("filter[status]", "1")
+  url.searchParams.set("fields[node--page]", "path")
+  url.searchParams.set("page[limit]", "50")
+
+  const doc = await fetch(url).then((r) => r.json())
+  const paths = (doc.data ?? [])
+    .map((node) => node?.attributes?.path?.alias)
+    .filter((p) => typeof p === "string" && p.startsWith("/"))
+
+  return paths.map((p) => ({
+    params: { slug: p.split("/").filter(Boolean) },
+    props: { path: p },
+  }))
+}
+```
+
+Then render each page by calling `/jsonapi/resolve` (for the path) and fetching the returned `jsonapi_url`.
 
 If you have a lot of content, paginate using JSON:API `links.next` (or `page[offset]`/`page[limit]`).
 
