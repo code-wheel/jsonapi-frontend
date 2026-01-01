@@ -154,7 +154,17 @@ Then render each page by calling `/jsonapi/resolve` (for the path) and fetching 
 
 If you have a lot of content, paginate using JSON:API `links.next` (or `page[offset]`/`page[limit]`).
 
-### Option B: Views route list (via `jsonapi_views`)
+### Option B: Built-in routes feed (recommended for SSG)
+
+If you prefer one build-time routes feed, enable the “Routes feed endpoint” in the “Static builds (SSG)” section. Your build tooling can then page through a single endpoint:
+
+```bash
+curl -H "X-Routes-Secret: $ROUTES_FEED_SECRET" "https://cms.example.com/jsonapi/routes?_format=json&page[limit]=50"
+```
+
+Follow `links.next` until it is null. Each item includes `path` plus either `jsonapi_url` (entity) or `data_url` (View).
+
+### Option C: Views route list (via `jsonapi_views`)
 
 If you prefer one “routes feed”, create a View that returns the alias/path for everything you want to pre-render (and expose it via `jsonapi_views`).
 

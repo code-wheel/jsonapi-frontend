@@ -8,6 +8,16 @@ jsonapi_frontend.resolve:
     _format: 'json'
   methods: [GET]
 
+jsonapi_frontend.routes:
+  path: '/jsonapi/routes'
+  defaults:
+    _controller: '\Drupal\jsonapi_frontend\Controller\RoutesFeedController::routes'
+  requirements:
+    # Allow anonymous access - protected via secret header in code.
+    _access: 'TRUE'
+    _format: 'json'
+  methods: [GET]
+
 jsonapi_frontend.settings:
   path: '/admin/config/services/jsonapi-frontend'
   defaults:

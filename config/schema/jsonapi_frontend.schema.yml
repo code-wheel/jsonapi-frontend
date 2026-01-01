@@ -68,6 +68,18 @@ jsonapi_frontend.settings:
           Regex:
             pattern: '/^[a-z_0-9]+:[a-z_0-9]+$/'
             message: 'View identifier must be in format "view_id:display_id".'
+    # Routes feed (SSG/build tooling)
+    routes:
+      type: mapping
+      label: 'Routes feed settings'
+      mapping:
+        enabled:
+          type: boolean
+          label: 'Enable routes feed endpoint'
+        secret:
+          type: string
+          label: 'Routes feed secret'
+          nullable: true
     # Cache revalidation configuration
     revalidation:
       type: mapping

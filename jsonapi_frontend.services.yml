@@ -10,6 +10,18 @@ services:
       - '@config.factory'
       - '@request_stack'
 
+  jsonapi_frontend.routes_feed_builder:
+    class: Drupal\jsonapi_frontend\Service\RoutesFeedBuilder
+    arguments:
+      - '@entity_type.manager'
+      - '@entity_type.bundle.info'
+      - '@path_alias.manager'
+      - '@language_manager'
+      - '@module_handler'
+      - '@config.factory'
+      - '@account_switcher'
+      - '@logger.channel.jsonapi_frontend'
+
   jsonapi_frontend.proxy_secret_subscriber:
     class: Drupal\jsonapi_frontend\EventSubscriber\ProxySecretSubscriber
     arguments:

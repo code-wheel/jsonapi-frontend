@@ -424,6 +424,53 @@ final class SettingsForm extends ConfigFormBase {
       ],
     ];
 
+    $form['ssg']['routes_feed'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Routes feed endpoint (optional)'),
+      '#open' => FALSE,
+      '#description' => $this->t('Enable a secret-protected endpoint that returns a paginated list of headless paths. This is useful when you want a single build-time route feed instead of crawling multiple JSON:API collection endpoints. Treat this endpoint like a deploy secret.'),
+    ];
+
+    $form['ssg']['routes_feed']['routes_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable routes feed'),
+      '#default_value' => (bool) ($config->get('routes.enabled') ?? FALSE),
+    ];
+
+    $form['ssg']['routes_feed']['routes_secret'] = [
+      '#type' => 'password',
+      '#title' => $this->t('Routes feed secret'),
+      '#description' => $this->t('Build tooling should send this as <code>X-Routes-Secret</code> header when requesting <code>/jsonapi/routes</code>. Leave empty to keep current value.'),
+      '#placeholder' => $config->get('routes.secret') ? $this->t('(secret configured - leave empty to keep)') : $this->t('Leave empty to auto-generate'),
+      '#states' => [
+        'visible' => [
+          ':input[name="routes_enabled"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['ssg']['routes_feed']['generate_routes_secret'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Generate new routes feed secret on save'),
+      '#default_value' => FALSE,
+      '#states' => [
+        'visible' => [
+          ':input[name="routes_enabled"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['ssg']['routes_feed']['routes_feed_usage'] = [
+      '#type' => 'markup',
+      '#markup' => '<p>' . $this->t('Endpoint: <code>/jsonapi/routes?_format=json&page[limit]=50</code>. Follow <code>links.next</code> until it is null.') . '</p>'
+        . '<pre><code>curl -H "X-Routes-Secret: $ROUTES_FEED_SECRET" "https://cms.example.com/jsonapi/routes?_format=json&amp;page[limit]=50"</code></pre>',
+      '#states' => [
+        'visible' => [
+          ':input[name="routes_enabled"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     // --- Cache Revalidation ---
     $form['revalidation'] = [
       '#type' => 'details',
@@ -667,6 +714,32 @@ final class SettingsForm extends ConfigFormBase {
     }
 
     $config->set('headless_views', $headless_views);
+
+    // --- Routes feed configuration ---
+    $config->set('routes.enabled', (bool) $form_state->getValue('routes_enabled'));
+
+    // Handle routes feed secret (password field - keep existing if empty).
+    $routes_secret = $form_state->getValue('routes_secret') ?: '';
+    $generate_routes_secret = $form_state->getValue('generate_routes_secret');
+    $current_routes_secret = $config->get('routes.secret') ?: '';
+
+    if ($generate_routes_secret) {
+      $routes_secret = bin2hex(random_bytes(32));
+      $this->messenger()->addStatus($this->t('New routes feed secret generated. Copy it to your build environment variables: <code>ROUTES_FEED_SECRET=@secret</code>', [
+        '@secret' => $routes_secret,
+      ]));
+    }
+    elseif (empty($routes_secret) && !empty($current_routes_secret)) {
+      $routes_secret = $current_routes_secret;
+    }
+    elseif ($form_state->getValue('routes_enabled') && empty($routes_secret) && empty($current_routes_secret)) {
+      $routes_secret = bin2hex(random_bytes(32));
+      $this->messenger()->addStatus($this->t('Routes feed secret generated. Copy it to your build environment variables: <code>ROUTES_FEED_SECRET=@secret</code>', [
+        '@secret' => $routes_secret,
+      ]));
+    }
+
+    $config->set('routes.secret', $routes_secret);
 
     // --- Revalidation configuration ---
     $config->set('revalidation.enabled', (bool) $form_state->getValue('revalidation_enabled'));

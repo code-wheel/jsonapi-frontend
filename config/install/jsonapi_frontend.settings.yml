@@ -65,6 +65,16 @@ enable_all_views: true
 # Only used when enable_all_views is false.
 headless_views: []
 
+# --- Routes feed (SSG/build tooling) ---
+
+# Optional secret-protected endpoint that returns a paginated list of headless
+# routes for static site generators and build pipelines.
+routes:
+  enabled: false
+  # Shared secret for authenticating requests to /jsonapi/routes.
+  # Build tooling should send this as X-Routes-Secret header.
+  secret: ''
+
 # --- Cache Revalidation Configuration ---
 
 # Cache revalidation allows instant cache invalidation when content changes.
