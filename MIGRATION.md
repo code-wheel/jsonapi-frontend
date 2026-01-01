@@ -110,6 +110,33 @@ DRUPAL_ORIGIN_URL=https://cms.example.com
 DRUPAL_PROXY_SECRET=your-secret-from-drupal-admin
 ```
 
+## Astro static builds (optional)
+
+Astro can run in SSR mode (like this starter) or in its default static mode (SSG). If you want SSG, you still use `/jsonapi/resolve` for correctness — the missing piece is getting a build-time list of paths.
+
+- SSG works best with `split_routing` (static builds can’t proxy Drupal HTML like `nextjs_first`).
+- Only pre-render public content; if your JSON:API requires per-user auth, prefer SSR.
+
+### Option A: JSON:API collection endpoints
+
+Fetch collections for the bundles you want to pre-render and collect `path.alias`.
+
+Example (pages):
+
+```bash
+curl "https://cms.example.com/jsonapi/node/page?filter[status]=1&fields[node--page]=path&page[limit]=50"
+```
+
+In your Astro `getStaticPaths()`, map `data[].attributes.path.alias` into route params (split into path segments for a catch-all route), then render each page by calling `/jsonapi/resolve` and fetching the returned `jsonapi_url`.
+
+If you have a lot of content, paginate using JSON:API `links.next` (or `page[offset]`/`page[limit]`).
+
+### Option B: Views route list (via `jsonapi_views`)
+
+If you prefer one “routes feed”, create a View that returns the alias/path for everything you want to pre-render (and expose it via `jsonapi_views`).
+
+Then fetch `/jsonapi/views/{view_id}/{display_id}` in `getStaticPaths()` and map each row into route params.
+
 ## Authentication & caching (optional)
 
 - For best CDN caching, keep `/jsonapi/resolve` + JSON:API public (anonymous) and rely on entity access and published state.
