@@ -116,6 +116,7 @@ Astro can run in SSR mode (like this starter) or in its default static mode (SSG
 
 - SSG works best with `split_routing` (static builds can’t proxy Drupal HTML like `nextjs_first`).
 - Only pre-render public content; if your JSON:API requires per-user auth, prefer SSR.
+- In Drupal admin (`/admin/config/services/jsonapi-frontend`), the “Static builds (SSG)” section shows copy/paste route list sources based on your headless bundle/View selections.
 
 ### Option A: JSON:API collection endpoints
 

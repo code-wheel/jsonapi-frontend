@@ -285,6 +285,145 @@ final class SettingsForm extends ConfigFormBase {
       }
     }
 
+    // --- Static builds (SSG) ---
+    $form['ssg'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Static builds (SSG)'),
+      '#open' => FALSE,
+      '#description' => $this->t('If you use Astro or other static site generators, you will need a build-time list of routes. This module\'s runtime routing still uses <code>/jsonapi/resolve</code>, but SSG requires a way to enumerate paths. See <a href="@url">the migration guide</a> for copy/paste examples.', [
+        '@url' => 'https://www.drupal.org/docs/contributed-modules/jsonapi-frontend/migration-guide',
+      ]),
+    ];
+
+    $enable_all = (bool) ($config->get('enable_all') ?? TRUE);
+    if ($enable_all) {
+      $form['ssg']['entities_note'] = [
+        '#type' => 'markup',
+        '#markup' => '<p><em>' . $this->t('Entity headless is set to "enable all". For SSG, it\'s usually better to select specific bundles (Entity Types section) and use the bundle-specific JSON:API collection endpoints listed below.') . '</em></p>',
+      ];
+    }
+
+    $headless_bundles = $config->get('headless_bundles') ?: [];
+    $entity_collection_urls = [];
+
+    foreach ($headless_bundles as $key) {
+      if (!is_string($key) || !str_contains($key, ':')) {
+        continue;
+      }
+      [$entity_type_id, $bundle_id] = explode(':', $key, 2);
+      $entity_type_id = trim($entity_type_id);
+      $bundle_id = trim($bundle_id);
+      if ($entity_type_id === '' || $bundle_id === '') {
+        continue;
+      }
+
+      $resource_type = "{$entity_type_id}--{$bundle_id}";
+      $url = "/jsonapi/{$entity_type_id}/{$bundle_id}";
+      $query = [
+        "fields[{$resource_type}]=path",
+        "page[limit]=50",
+      ];
+
+      // Nodes have a standard "status" field for published content.
+      if ($entity_type_id === 'node') {
+        $query[] = "filter[status]=1";
+      }
+
+      $entity_collection_urls[] = $url . '?' . implode('&', $query);
+    }
+
+    sort($entity_collection_urls);
+
+    $form['ssg']['entity_collections'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Entity route list sources (JSON:API collections)'),
+      '#description' => $this->t('Use these endpoints at build time to collect <code>path.alias</code>, then pre-render pages. These are limited to the bundles you\'ve marked headless.'),
+      '#default_value' => implode("\n", $entity_collection_urls),
+      '#rows' => min(10, max(2, count($entity_collection_urls) + 1)),
+      '#attributes' => [
+        'readonly' => 'readonly',
+      ],
+    ];
+
+    $enable_all_views = (bool) ($config->get('enable_all_views') ?? TRUE);
+    $headless_views = $config->get('headless_views') ?: [];
+
+    if ($enable_all_views) {
+      $form['ssg']['views_note'] = [
+        '#type' => 'markup',
+        '#markup' => '<p><em>' . $this->t('Views headless is set to "enable all". For SSG, it\'s usually better to select specific View page displays (Views section) and pre-render only those routes.') . '</em></p>',
+      ];
+    }
+
+    $view_page_routes = [];
+    if ($this->moduleHandler->moduleExists('views')) {
+      try {
+        $view_storage = $this->entityTypeManager->getStorage('view');
+
+        foreach ($headless_views as $key) {
+          if (!is_string($key) || !str_contains($key, ':')) {
+            continue;
+          }
+          [$view_id, $display_id] = explode(':', $key, 2);
+          $view_id = trim($view_id);
+          $display_id = trim($display_id);
+          if ($view_id === '' || $display_id === '') {
+            continue;
+          }
+
+          /** @var \Drupal\views\ViewEntityInterface|null $view */
+          $view = $view_storage->load($view_id);
+          if (!$view) {
+            continue;
+          }
+
+          $displays = $view->get('display') ?: [];
+          if (!isset($displays[$display_id]['display_options']['path'])) {
+            continue;
+          }
+
+          $path = (string) ($displays[$display_id]['display_options']['path'] ?? '');
+          $path = trim($path);
+          if ($path === '') {
+            continue;
+          }
+
+          $path = '/' . ltrim($path, '/');
+          $data_url = "/jsonapi/views/{$view_id}/{$display_id}";
+
+          $view_page_routes[] = $path . ' => ' . $data_url;
+        }
+      }
+      catch (\Exception $e) {
+        $form['ssg']['views_error'] = [
+          '#type' => 'markup',
+          '#markup' => '<p><em>' . $this->t('Could not load View routes. See logs for details.') . '</em></p>',
+        ];
+        \Drupal::logger('jsonapi_frontend')->warning('Could not build View route list: @message', [
+          '@message' => $e->getMessage(),
+        ]);
+      }
+    }
+    else {
+      $form['ssg']['views_missing'] = [
+        '#type' => 'markup',
+        '#markup' => '<p><em>' . $this->t('Views module is not enabled.') . '</em></p>',
+      ];
+    }
+
+    sort($view_page_routes);
+
+    $form['ssg']['view_pages'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('View page routes (path => JSON:API Views endpoint)'),
+      '#description' => $this->t('These are limited to the View page displays you\'ve marked headless. The left side is the route you pre-render; the right side is the data endpoint returned by the resolver.'),
+      '#default_value' => implode("\n", $view_page_routes),
+      '#rows' => min(10, max(2, count($view_page_routes) + 1)),
+      '#attributes' => [
+        'readonly' => 'readonly',
+      ],
+    ];
+
     // --- Cache Revalidation ---
     $form['revalidation'] = [
       '#type' => 'details',
