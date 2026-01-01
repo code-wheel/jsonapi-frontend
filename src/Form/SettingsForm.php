@@ -53,6 +53,21 @@ final class SettingsForm extends ConfigFormBase {
       '#markup' => '<p>' . $this->t('Configure which content should be rendered by your headless frontend (e.g., Next.js). Unchecked items will include a <code>drupal_url</code> in the resolver response, allowing the frontend to redirect or proxy to Drupal. This enables <strong>sequential migration</strong> — move content types one at a time while keeping others on Drupal.') . '</p>',
     ];
 
+    $form['secrets'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Secrets (recommended)'),
+      '#open' => FALSE,
+      '#description' => $this->t('Secrets are stored outside config exports by default (state) so they won\'t leak via config sync. For deterministic deploys, you can provide secrets via <code>settings.php</code> (typically from environment variables).'),
+    ];
+
+    $form['secrets']['settings_php'] = [
+      '#type' => 'markup',
+      '#markup' => '<pre><code>$settings[\'jsonapi_frontend\'][\'proxy_secret\'] = getenv(\'DRUPAL_PROXY_SECRET\') ?: \'\';
+$settings[\'jsonapi_frontend\'][\'routes_secret\'] = getenv(\'ROUTES_FEED_SECRET\') ?: \'\';
+$settings[\'jsonapi_frontend\'][\'revalidation_secret\'] = getenv(\'REVALIDATION_SECRET\') ?: \'\';
+</code></pre><p><em>' . $this->t('When a secret is provided via <code>settings.php</code>, the corresponding field below is disabled.') . '</em></p>',
+    ];
+
     // --- Deployment Mode ---
     $form['deployment'] = [
       '#type' => 'details',
