@@ -362,8 +362,8 @@ final class SettingsForm extends ConfigFormBase {
   },
   "timestamp": 1704067200
 }</code></pre>
-<p>' . $this->t('The webhook sends a POST request with <code>X-Revalidation-Secret</code> header. Your frontend should validate this header and call <code>revalidateTag()</code> for each tag.') . '</p>',
-    ];
+	<p>' . $this->t('The webhook sends a POST request with <code>X-Revalidation-Secret</code> header. Your frontend should validate this header and call <code>revalidateTag(tag, "max")</code> for each tag.') . '</p>',
+	    ];
 
     return parent::buildForm($form, $form_state);
   }
