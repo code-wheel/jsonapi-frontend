@@ -116,6 +116,48 @@ DRUPAL_PROXY_SECRET=your-secret-from-drupal-admin
 - If you require authenticated reads, keep credentials server-side and forward the `Authorization` header through your router/proxy. Do not edge-cache auth responses.
 - If you use cookie-based Drupal sessions for writes, you’ll need `X-CSRF-Token` (`/session/token`) plus a strict CORS policy; bearer tokens avoid CSRF.
 
+## Security hardening (recommended)
+
+### 1) Rate limit resolver + JSON:API
+
+The resolver is safe, but it’s still an extra lookup. Treat it like part of your public JSON:API surface and rate limit it at the edge:
+
+- `/jsonapi/resolve*` (path enumeration / load)
+- `/jsonapi/*` (API load)
+
+**Cloudflare (high-level)**
+
+- Add a Rate Limiting rule or WAF rule for `/jsonapi/resolve*` and `/jsonapi/*` (block or managed challenge after a threshold).
+
+**nginx (example)**
+
+```nginx
+limit_req_zone $binary_remote_addr zone=jsonapi_resolve:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=jsonapi_api:10m rate=120r/m;
+
+location = /jsonapi/resolve {
+  limit_req zone=jsonapi_resolve burst=30 nodelay;
+  proxy_pass http://drupal_upstream;
+}
+
+location ^~ /jsonapi/ {
+  limit_req zone=jsonapi_api burst=60 nodelay;
+  proxy_pass http://drupal_upstream;
+}
+```
+
+### 2) Prevent image-host abuse (Next.js)
+
+In production, always restrict remote images to your Drupal host:
+
+- Set `DRUPAL_IMAGE_DOMAIN`, or
+- Ensure `DRUPAL_BASE_URL` is set at build time so the starter can derive a safe allowlist.
+
+### 3) Host / redirect safety (Drupal)
+
+- Set `trusted_host_patterns` in Drupal `settings.php` (prevents Host-header injection issues).
+- Set “Drupal URL” in the module settings so generated `drupal_url` values are deterministic.
+
 In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests, and allows these paths through without the secret:
 - `/jsonapi/*`, `/admin/*`, `/user/*`, `/batch*`, `/system*`
 
