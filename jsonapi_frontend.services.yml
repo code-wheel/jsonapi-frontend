@@ -9,6 +9,7 @@ services:
       - '@module_handler'
       - '@config.factory'
       - '@request_stack'
+      - '@?redirect.repository'
 
   jsonapi_frontend.routes_feed_builder:
     class: Drupal\jsonapi_frontend\Service\RoutesFeedBuilder

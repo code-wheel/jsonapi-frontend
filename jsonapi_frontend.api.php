@@ -99,7 +99,7 @@
  *
  * if ($result['resolved']) {
  *   // Path was resolved.
- *   $kind = $result['kind']; // 'entity' or 'view'
+ *   $kind = $result['kind']; // 'entity', 'view', or 'redirect'
  *   $headless = $result['headless']; // TRUE if headless-enabled
  *
  *   if ($result['kind'] === 'entity') {
@@ -109,6 +109,10 @@
  *   }
  *   elseif ($result['kind'] === 'view') {
  *     $data_url = $result['data_url'];
+ *   }
+ *   elseif ($result['kind'] === 'redirect') {
+ *     $to = $result['redirect']['to'];
+ *     $status = $result['redirect']['status']; // 301/302/etc
  *   }
  * }
  * @endcode

@@ -110,6 +110,8 @@ DRUPAL_ORIGIN_URL=https://cms.example.com
 DRUPAL_PROXY_SECRET=your-secret-from-drupal-admin
 ```
 
+If you enable “Protect /jsonapi/* with Proxy Secret (hide origin JSON:API)” in Drupal, your frontend must include `X-Proxy-Secret` on all `/jsonapi/*` requests. The starters automatically include it when `DRUPAL_PROXY_SECRET` is set.
+
 ## Astro static builds (optional)
 
 Astro can run in SSR mode (like this starter) or in its default static mode (SSG). If you want SSG, you still use `/jsonapi/resolve` for correctness — the missing piece is getting a build-time list of paths.
@@ -228,8 +230,11 @@ $settings['jsonapi_frontend']['routes_secret'] = getenv('ROUTES_FEED_SECRET');
 $settings['jsonapi_frontend']['revalidation_secret'] = getenv('REVALIDATION_SECRET');
 ```
 
-In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests, and allows these paths through without the secret:
-- `/jsonapi/*`, `/admin/*`, `/user/*`, `/batch*`, `/system*`
+In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests:
+
+- Always excluded: `/admin/*`, `/user/*`, `/batch*`, `/system*`
+- Default: `/jsonapi/*` is excluded so JSON:API can be accessed directly
+- Optional: enable “Protect /jsonapi/*” in the module settings to also require `X-Proxy-Secret` for `/jsonapi/*` (server-side only)
 
 If you proxy Drupal HTML through your frontend, also proxy Drupal assets (commonly `/sites/*`, `/core/*`, `/modules/*`, `/themes/*`) so pages can load CSS/JS/files.
 
@@ -261,6 +266,7 @@ Expected behavior:
 - `resolved: false` for unknown/unviewable paths
 - `kind: "entity"` with `jsonapi_url` for entities
 - `kind: "view"` with `data_url` when `jsonapi_views` is installed and configured
+- `kind: "redirect"` with `redirect.to` + `redirect.status` when the Redirect module matches the path
 - `headless: true/false` depending on your configuration
 
 ## 5. Migrate incrementally

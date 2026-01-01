@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\Path\PathValidatorInterface;
+use Drupal\jsonapi_frontend\Service\PathResolver;
+use Drupal\path_alias\AliasManagerInterface;
 use Drupal\Tests\UnitTestCase;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Unit tests for PathResolver helper methods.
@@ -13,6 +21,84 @@ use Drupal\Tests\UnitTestCase;
  * @coversDefaultClass \Drupal\jsonapi_frontend\Service\PathResolver
  */
 class PathResolverTest extends UnitTestCase {
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveRedirect(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->expects($this->never())->method('getPathByAlias');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->expects($this->never())->method('getUrlIfValid');
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $configFactory = $this->createMock(ConfigFactoryInterface::class);
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'redirect';
+    });
+
+    $redirectRepository = new class {
+      public array $calls = [];
+
+      public function findMatchingRedirect(string $source_path, array $query = [], string $language = 'und'): object {
+        $this->calls[] = [
+          'source_path' => $source_path,
+          'query' => $query,
+          'language' => $language,
+        ];
+
+        return new class {
+          public function getStatusCode(): int {
+            return 301;
+          }
+
+          public function getRedirectUrl(): object {
+            return new class {
+              public function toString(): string {
+                return '/new-path';
+              }
+            };
+          }
+        };
+      }
+    };
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      $redirectRepository,
+    );
+
+    $result = $resolver->resolve('/old-path?utm=1', 'en');
+
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('redirect', $result['kind']);
+    $this->assertSame('/old-path', $result['canonical']);
+    $this->assertSame([
+      'to' => '/new-path',
+      'status' => 301,
+    ], $result['redirect']);
+    $this->assertNull($result['entity']);
+    $this->assertNull($result['jsonapi_url']);
+    $this->assertNull($result['data_url']);
+
+    $this->assertCount(1, $redirectRepository->calls);
+    $this->assertSame([
+      'utm' => '1',
+    ], $redirectRepository->calls[0]['query']);
+    $this->assertSame('en', $redirectRepository->calls[0]['language']);
+  }
 
   /**
    * Tests JSON:API resource type generation.

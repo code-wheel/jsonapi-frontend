@@ -20,6 +20,9 @@ jsonapi_frontend.settings:
       type: string
       label: 'Proxy secret for origin protection'
       nullable: true
+    proxy_protect_jsonapi:
+      type: boolean
+      label: 'Protect /jsonapi/* with proxy secret'
     # Resolver configuration
     resolver:
       type: mapping

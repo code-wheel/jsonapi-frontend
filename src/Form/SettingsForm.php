@@ -129,6 +129,18 @@ $settings[\'jsonapi_frontend\'][\'revalidation_secret\'] = getenv(\'REVALIDATION
       ],
     ];
 
+    $form['deployment']['proxy_protect_jsonapi'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Protect /jsonapi/* with Proxy Secret (hide origin JSON:API)'),
+      '#description' => $this->t('When enabled, Drupal will require <code>X-Proxy-Secret</code> for <code>/jsonapi/*</code> (including <code>/jsonapi/resolve</code>). Only enable if your frontend fetches JSON:API server-side and never exposes secrets to browsers.'),
+      '#default_value' => (bool) ($config->get('proxy_protect_jsonapi') ?? FALSE),
+      '#states' => [
+        'visible' => [
+          ':input[name="deployment_mode"]' => ['value' => 'nextjs_first'],
+        ],
+      ],
+    ];
+
     $form['deployment']['generate_secret'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Generate new proxy secret on save'),
@@ -665,6 +677,7 @@ $settings[\'jsonapi_frontend\'][\'revalidation_secret\'] = getenv(\'REVALIDATION
     // --- Deployment configuration ---
     $config->set('deployment_mode', $form_state->getValue('deployment_mode') ?: 'split_routing');
     $config->set('drupal_base_url', $form_state->getValue('drupal_base_url') ?: '');
+    $config->set('proxy_protect_jsonapi', (bool) $form_state->getValue('proxy_protect_jsonapi'));
 
     // Handle proxy secret (password field - keep existing if empty)
     $proxy_secret = $form_state->getValue('proxy_secret') ?: '';

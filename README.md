@@ -3,6 +3,7 @@
 `jsonapi_frontend` is a minimal Drupal module that makes JSON:API frontend-ready by adding a **path → JSON:API URL** resolver endpoint.
 
 - Resolve frontend paths (including aliases) to JSON:API resource URLs
+- Optional Redirect support (honors `redirect` module; returns 301/302 info)
 - Hybrid headless: choose what your frontend renders vs what stays on Drupal
 - Optional Views support via `jsonapi_views`
 - Optional secret-protected routes feed (`/jsonapi/routes`) for static builds (SSG)
@@ -98,6 +99,7 @@ For deployment and migration examples, see `MIGRATION.md`.
 - For config-managed sites, secrets are stored outside config exports (state) and can be overridden in `settings.php`.
 - The endpoint lives under `/jsonapi/` so it can share the same perimeter rules you apply to JSON:API.
 - If you run “frontend-first”, you can protect the Drupal origin with a shared secret header.
+- If you want a fully hidden origin, you can also require the proxy secret for `/jsonapi/*` (server-side fetching only).
 - For authenticated JSON:API, keep credentials server-side (Basic/OAuth/JWT). Cookie-based writes require Drupal CSRF tokens (`/session/token`) and strict CORS.
 
 ## Links

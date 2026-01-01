@@ -28,6 +28,12 @@ drupal_base_url: ''
 # Leave empty to disable origin protection (not recommended for production).
 proxy_secret: ''
 
+# If true, /jsonapi/* also requires X-Proxy-Secret (nextjs_first mode only).
+# This hides your Drupal origin JSON:API endpoints from direct/public access.
+# Only enable if your frontend fetches JSON:API server-side (never from the
+# browser), so the secret is not exposed to end users.
+proxy_protect_jsonapi: false
+
 # --- Resolver Configuration ---
 
 # Cache max-age for the resolver endpoint (/jsonapi/resolve) in seconds.

@@ -29,6 +29,7 @@ final class PathResolver {
     private readonly ModuleHandlerInterface $moduleHandler,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly RequestStack $requestStack,
+    private readonly ?object $redirectRepository = NULL,
   ) {}
 
   /**
@@ -36,16 +37,17 @@ final class PathResolver {
    *
    * Contract:
    * - resolved: bool
-   * - kind: "entity"|"view"|null
+   * - kind: "entity"|"view"|"redirect"|null
    * - canonical: string|null
    * - entity: {type,id,langcode}|null
-   * - redirect: {to,status}|null (always null in v1)
+   * - redirect: {to,status}|null
    * - jsonapi_url: string|null (for entities)
    * - data_url: string|null (for views)
    * - headless: bool (whether this content type is headless-enabled)
    * - drupal_url: string|null (URL to Drupal frontend for non-headless content)
    */
   public function resolve(string $path, ?string $langcode = NULL): array {
+    [$path, $query] = $this->splitPathAndQuery($path);
     $path = $this->normalizePath($path);
 
     if ($path === '') {
@@ -63,6 +65,13 @@ final class PathResolver {
       else {
         $langcode = $this->languageManager->getDefaultLanguage()->getId();
       }
+    }
+
+    // If the Redirect module is installed, mimic Drupal's redirect behavior.
+    // This allows frontends to return the correct 301/302 responses during
+    // migrations (and keeps path-based links stable).
+    if ($redirect = $this->resolveRedirect($path, $query, $langcode)) {
+      return $redirect;
     }
 
     // Alias → internal system path.
@@ -270,6 +279,112 @@ final class PathResolver {
       $path = rtrim($path, '/');
     }
     return $path;
+  }
+
+  /**
+   * Splits a user-provided path string into path and query array.
+   *
+   * The resolver accepts a single `path` string, but Redirect can match based
+   * on query strings. To support this, we parse "path?key=val" input.
+   *
+   * @return array{0: string, 1: array}
+   *   [path, query]
+   */
+  private function splitPathAndQuery(string $path): array {
+    $path = trim($path);
+    if ($path === '') {
+      return ['', []];
+    }
+
+    // Remove fragment if present (it shouldn't affect routing/redirects).
+    if (str_contains($path, '#')) {
+      $path = strstr($path, '#', TRUE) ?: '';
+    }
+
+    $query = [];
+    $qpos = strpos($path, '?');
+    if ($qpos === FALSE) {
+      return [$path, $query];
+    }
+
+    $raw_path = substr($path, 0, $qpos);
+    $query_string = substr($path, $qpos + 1);
+
+    if ($query_string !== '') {
+      parse_str($query_string, $query);
+      if (!is_array($query)) {
+        $query = [];
+      }
+    }
+
+    return [$raw_path, $query];
+  }
+
+  private function resolveRedirect(string $path, array $query, string $langcode): ?array {
+    if (!$this->redirectRepository || !$this->moduleHandler->moduleExists('redirect')) {
+      return NULL;
+    }
+
+    if (!method_exists($this->redirectRepository, 'findMatchingRedirect')) {
+      return NULL;
+    }
+
+    try {
+      $redirect = $this->redirectRepository->findMatchingRedirect($path, $query, $langcode);
+    }
+    catch (\Throwable) {
+      return NULL;
+    }
+
+    if (!is_object($redirect)) {
+      return NULL;
+    }
+
+    $status = 301;
+    if (method_exists($redirect, 'getStatusCode')) {
+      $raw_status = $redirect->getStatusCode();
+      if (is_int($raw_status) || (is_string($raw_status) && ctype_digit($raw_status))) {
+        $status = (int) $raw_status;
+      }
+    }
+
+    if ($status < 300 || $status > 399) {
+      $status = 301;
+    }
+
+    $to = NULL;
+    if (method_exists($redirect, 'getRedirectUrl')) {
+      $url = $redirect->getRedirectUrl();
+      if (is_object($url) && method_exists($url, 'toString')) {
+        $to = $url->toString();
+      }
+    }
+
+    if (!is_string($to) || trim($to) === '') {
+      return NULL;
+    }
+
+    $to = trim($to);
+
+    // Ensure internal paths always have a leading slash.
+    if (!preg_match('#^[a-z][a-z0-9+\\-.]*://#i', $to) && !str_starts_with($to, '/')) {
+      $to = '/' . $to;
+    }
+
+    return [
+      'resolved' => TRUE,
+      'kind' => 'redirect',
+      'canonical' => $path,
+      'entity' => NULL,
+      'redirect' => [
+        'to' => $to,
+        'status' => $status,
+      ],
+      'jsonapi_url' => NULL,
+      'data_url' => NULL,
+      'headless' => FALSE,
+      'drupal_url' => NULL,
+    ];
   }
 
   private function extractEntityFromRoute(?string $route_name, array $params): ?ContentEntityInterface {

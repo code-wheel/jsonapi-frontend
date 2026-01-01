@@ -19,7 +19,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * from direct access when running behind a Next.js proxy.
  *
  * Excluded paths:
- * - /jsonapi/* (API access for resolver and data fetching)
+ * - /jsonapi/* (API access for resolver and data fetching; optional)
  * - /admin/* (direct admin access)
  * - /user/* (login/logout)
  * - /batch (batch processing)
@@ -30,7 +30,6 @@ final class ProxySecretSubscriber implements EventSubscriberInterface {
    * Paths that bypass proxy secret validation.
    */
   private const EXCLUDED_PATHS = [
-    '/jsonapi',
     '/admin',
     '/user',
     '/batch',
@@ -75,8 +74,15 @@ final class ProxySecretSubscriber implements EventSubscriberInterface {
     // Prevents bypass via /ADMIN, /JsonApi, etc.
     $path_lower = strtolower($path);
 
+    $excluded_paths = self::EXCLUDED_PATHS;
+
+    $protect_jsonapi = (bool) ($config->get('proxy_protect_jsonapi') ?? FALSE);
+    if (!$protect_jsonapi) {
+      $excluded_paths[] = '/jsonapi';
+    }
+
     // Skip validation for excluded paths.
-    foreach (self::EXCLUDED_PATHS as $excluded) {
+    foreach ($excluded_paths as $excluded) {
       if (str_starts_with($path_lower, $excluded)) {
         return;
       }
