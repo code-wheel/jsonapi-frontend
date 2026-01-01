@@ -90,6 +90,84 @@ You can use any framework. Two easy options:
 - Next.js starter (optional): https://github.com/code-wheel/jsonapi-frontend-next
 - Astro starter (optional): https://github.com/code-wheel/jsonapi-frontend-astro
 
+### Nuxt 3 recipe (SSR)
+
+The core pattern is the same:
+
+1) Catch-all route receives a path
+2) Call `/jsonapi/resolve` to get `jsonapi_url` / `data_url` / `drupal_url` / redirects
+3) If `headless=false`, redirect/proxy to Drupal
+4) Otherwise fetch JSON:API and render
+
+Minimal Nuxt setup that keeps secrets server-side (works with optional “Protect /jsonapi/*”):
+
+`nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+  runtimeConfig: {
+    drupalBaseUrl: process.env.DRUPAL_BASE_URL,
+    drupalProxySecret: process.env.DRUPAL_PROXY_SECRET,
+  },
+})
+```
+
+`server/utils/drupal.ts`:
+
+```ts
+export async function drupalFetch<T>(path: string, opts?: { query?: Record<string, unknown> }) {
+  const config = useRuntimeConfig()
+  const url = new URL(path, config.drupalBaseUrl)
+  const headers: Record<string, string> = { Accept: "application/vnd.api+json" }
+  if (config.drupalProxySecret) headers["X-Proxy-Secret"] = config.drupalProxySecret
+  return await $fetch<T>(url.toString(), { query: opts?.query, headers })
+}
+```
+
+`pages/[...slug].vue` (sketch):
+
+```ts
+const route = useRoute()
+const path = "/" + (Array.isArray(route.params.slug) ? route.params.slug.join("/") : "")
+const resolved = await drupalFetch<any>("/jsonapi/resolve", { query: { path, _format: "json" } })
+if (!resolved?.resolved) throw createError({ statusCode: 404 })
+if (resolved.redirect) return navigateTo(resolved.redirect.to, { external: true, redirectCode: resolved.redirect.status ?? 302 })
+if (!resolved.headless && resolved.drupal_url) return navigateTo(resolved.drupal_url, { external: true, redirectCode: 302 })
+// then fetch resolved.jsonapi_url or resolved.data_url and render
+```
+
+### Remix recipe (SSR)
+
+Remix loaders run server-side by default, so it’s a good fit for `/jsonapi/resolve` + optional origin protection.
+
+`app/routes/$.tsx` (catch-all route):
+
+```ts
+import { redirect } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const path = "/" + (params["*"] ?? "")
+  const base = process.env.DRUPAL_BASE_URL!
+  const proxySecret = process.env.DRUPAL_PROXY_SECRET
+
+  const url = new URL("/jsonapi/resolve", base)
+  url.searchParams.set("path", path)
+  url.searchParams.set("_format", "json")
+
+  const headers: Record<string, string> = { Accept: "application/vnd.api+json" }
+  if (proxySecret) headers["X-Proxy-Secret"] = proxySecret
+
+  const resolved = await fetch(url, { headers }).then((r) => r.json())
+  if (!resolved?.resolved) throw new Response("Not Found", { status: 404 })
+  if (resolved.redirect) throw redirect(resolved.redirect.to, resolved.redirect.status ?? 302)
+  if (!resolved.headless && resolved.drupal_url) throw redirect(resolved.drupal_url, 302)
+
+  // then fetch resolved.jsonapi_url or resolved.data_url and return data
+  return { resolved }
+}
+```
+
 ### Split routing frontend env
 
 For the starter templates (Next.js / Astro):

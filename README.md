@@ -72,6 +72,7 @@ if (resolved.resolved && resolved.kind === "entity") {
 
 - Next.js (routing + rendering + media helpers): https://github.com/code-wheel/jsonapi-frontend-next
 - Astro (SSR + optional proxy middleware): https://github.com/code-wheel/jsonapi-frontend-astro
+- Nuxt 3 + Remix recipes: see `MIGRATION.md`
 
 ## Configuration
 
