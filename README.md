@@ -10,6 +10,9 @@
 - Optional cache revalidation webhooks for frontend caches (Next.js, etc.)
 - Optional menu endpoint (`/jsonapi/menu/{menu}`) via `jsonapi_frontend_menu`
 
+Documentation: https://www.drupal.org/docs/contributed-modules/jsonapi-frontend
+Issue queue: https://www.drupal.org/project/issues/jsonapi_frontend
+
 ## Requirements
 
 - Drupal 10 or 11
