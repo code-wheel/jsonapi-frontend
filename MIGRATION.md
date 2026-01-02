@@ -90,6 +90,11 @@ You can use any framework. Two easy options:
 - Next.js starter (optional): https://github.com/code-wheel/jsonapi-frontend-next
 - Astro starter (optional): https://github.com/code-wheel/jsonapi-frontend-astro
 
+One-click deploy (Vercel):
+
+- Next.js: https://vercel.com/new/clone?repository-url=https://github.com/code-wheel/jsonapi-frontend-next&env=DRUPAL_BASE_URL
+- Astro: https://vercel.com/new/clone?repository-url=https://github.com/code-wheel/jsonapi-frontend-astro&env=DRUPAL_BASE_URL
+
 ### Nuxt 3 recipe (SSR)
 
 The core pattern is the same:
