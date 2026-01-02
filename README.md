@@ -8,6 +8,7 @@
 - Optional Views support via `jsonapi_views`
 - Optional secret-protected routes feed (`/jsonapi/routes`) for static builds (SSG)
 - Optional cache revalidation webhooks for frontend caches (Next.js, etc.)
+- Optional menu endpoint (`/jsonapi/menu/{menu}`) via `jsonapi_frontend_menu`
 
 ## Requirements
 
@@ -109,4 +110,5 @@ For deployment and migration examples, see `MIGRATION.md`.
 - Changelog: `CHANGELOG.md`
 - NPM client: https://www.npmjs.com/package/@codewheel/jsonapi-frontend-client
 - Starter: https://github.com/code-wheel/jsonapi-frontend-next
-- Webforms (optional): https://www.drupal.org/project/next_webform
+- Menus (optional): https://www.drupal.org/project/jsonapi_frontend_menu
+- Webforms (optional): https://www.drupal.org/project/jsonapi_frontend_webform

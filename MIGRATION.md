@@ -168,12 +168,24 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 ```
 
+## Menus / navigation (optional)
+
+Two approaches:
+
+- Baseline: use <a href="https://www.drupal.org/project/jsonapi_menu_items">jsonapi_menu_items</a> to expose menu links with Drupal access filtering.
+- Turnkey: install <a href="https://www.drupal.org/project/jsonapi_frontend_menu">jsonapi_frontend_menu</a> to get a ready-to-render tree + optional active trail + per-link `resolve` hints:
+
+  <pre><code>GET /jsonapi/menu/main?path=/about-us&amp;_format=json</code></pre>
+
+If you want maximum cache reuse, call the menu endpoint <em>without</em> `path` and compute active trail client-side.
+
 ### Webforms (Drupal Webform) (optional)
 
 Most teams do this in one of two ways:
 
 1) **Hybrid (recommended):** keep Webform pages non-headless so the frontend redirects/proxies to Drupal for form rendering + submission.
-2) **Fully headless (Next.js):** use the community Webform renderer:
+   - Add-on module: <a href="https://www.drupal.org/project/jsonapi_frontend_webform">jsonapi_frontend_webform</a>
+2) **Fully headless (Next.js-specific):** use a community Webform renderer (evaluate maintenance):
    - Drupal project: <a href="https://www.drupal.org/project/next_webform">next_webform</a>
    - NPM package: <a href="https://www.npmjs.com/package/nextjs-drupal-webform">nextjs-drupal-webform</a>
 
