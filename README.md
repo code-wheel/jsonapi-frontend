@@ -109,3 +109,4 @@ For deployment and migration examples, see `MIGRATION.md`.
 - Changelog: `CHANGELOG.md`
 - NPM client: https://www.npmjs.com/package/@codewheel/jsonapi-frontend-client
 - Starter: https://github.com/code-wheel/jsonapi-frontend-next
+- Webforms (optional): https://www.drupal.org/project/next_webform

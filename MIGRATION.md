@@ -168,6 +168,17 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 ```
 
+### Webforms (Drupal Webform) (optional)
+
+Most teams do this in one of two ways:
+
+1) **Hybrid (recommended):** keep Webform pages non-headless so the frontend redirects/proxies to Drupal for form rendering + submission.
+2) **Fully headless (Next.js):** use the community Webform renderer:
+   - Drupal project: <a href="https://www.drupal.org/project/next_webform">next_webform</a>
+   - NPM package: <a href="https://www.npmjs.com/package/nextjs-drupal-webform">nextjs-drupal-webform</a>
+
+The headless approach typically relies on <a href="https://www.drupal.org/project/webform_rest">webform_rest</a> (REST resources) and requires careful auth/CORS/CSRF handling for submissions.
+
 ### Split routing frontend env
 
 For the starter templates (Next.js / Astro):
