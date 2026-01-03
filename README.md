@@ -1,5 +1,7 @@
 # JSON:API Frontend
 
+[![Drupal Module](https://github.com/code-wheel/jsonapi-frontend/actions/workflows/drupal-module.yml/badge.svg?branch=master)](https://github.com/code-wheel/jsonapi-frontend/actions/workflows/drupal-module.yml?query=branch%3Amaster) [![Semgrep](https://github.com/code-wheel/jsonapi-frontend/actions/workflows/semgrep.yml/badge.svg?branch=master)](https://github.com/code-wheel/jsonapi-frontend/actions/workflows/semgrep.yml?query=branch%3Amaster) [![codecov](https://codecov.io/gh/code-wheel/jsonapi-frontend/branch/master/graph/badge.svg)](https://codecov.io/gh/code-wheel/jsonapi-frontend) [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
+
 `jsonapi_frontend` is a minimal Drupal module that makes JSON:API frontend-ready by adding a **path → JSON:API URL** resolver endpoint.
 
 - Resolve frontend paths (including aliases) to JSON:API resource URLs
