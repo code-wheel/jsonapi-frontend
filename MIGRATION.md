@@ -316,6 +316,9 @@ The resolver is safe, but it’s still an extra lookup. Treat it like part of yo
 **Cloudflare (high-level)**
 
 - Add a Rate Limiting rule or WAF rule for `/jsonapi/resolve*` and `/jsonapi/*` (block or managed challenge after a threshold).
+- Example expressions:
+  - Resolver: `http.request.uri.path eq "/jsonapi/resolve"`
+  - JSON:API: `starts_with(http.request.uri.path, "/jsonapi/")`
 
 **nginx (example)**
 
@@ -334,6 +337,16 @@ location ^~ /jsonapi/ {
 }
 ```
 
+### 1b) Forward auth headers (when using a proxy)
+
+If you use authenticated JSON:API requests (Basic/OAuth/JWT), ensure your proxy forwards the `Authorization` header to Drupal.
+
+**nginx**
+
+```nginx
+proxy_set_header Authorization $http_authorization;
+```
+
 ### 2) Prevent image-host abuse (Next.js)
 
 In production, always restrict remote images to your Drupal host:
@@ -345,6 +358,16 @@ In production, always restrict remote images to your Drupal host:
 
 - Set `trusted_host_patterns` in Drupal `settings.php` (prevents Host-header injection issues).
 - Set “Drupal URL” in the module settings so generated `drupal_url` values are deterministic.
+
+Example `settings.php`:
+
+```php
+$settings['trusted_host_patterns'] = [
+  '^example\\.com$',
+  '^www\\.example\\.com$',
+  '^cms\\.example\\.com$',
+];
+```
 
 ### 4) Keep secrets out of config exports
 

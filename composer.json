@@ -24,11 +24,5 @@
   ],
   "require": {
     "drupal/core": "^10 || ^11"
-  },
-  "extra": {
-    "drupal": {
-      "version": "1.0.7",
-      "datestamp": ""
-    }
   }
 }

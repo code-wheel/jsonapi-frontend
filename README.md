@@ -98,6 +98,15 @@ Typical settings:
 
 For deployment and migration examples, see `MIGRATION.md`.
 
+## Production checklist
+
+- Set “Drupal URL” so `drupal_url` is deterministic (don’t rely on Host headers).
+- Set `trusted_host_patterns` in `settings.php`.
+- If using `nextjs_first`, set `X-Proxy-Secret` and keep it in env/`settings.php` (not config exports).
+- Rate limit `/jsonapi/resolve*` and `/jsonapi/*` at the edge (Cloudflare/nginx) to prevent path brute-force load.
+- If using authenticated JSON:API, keep credentials server-side and never cache authenticated responses.
+- For Next.js images, restrict remote domains (`DRUPAL_IMAGE_DOMAIN` in the starter).
+
 ## Supported content
 
 - **Entities:** any canonical content entity route exposed by JSON:API (nodes, terms, media, users, and custom entities)
