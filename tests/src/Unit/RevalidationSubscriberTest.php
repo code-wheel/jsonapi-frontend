@@ -66,6 +66,11 @@ final class RevalidationSubscriberTest extends UnitTestCase {
     );
   }
 
+  private function isValidWebhookUrl(RevalidationSubscriber $subscriber, string $url): bool {
+    $ref = new \ReflectionMethod($subscriber, 'isValidWebhookUrl');
+    return (bool) $ref->invoke($subscriber, $url);
+  }
+
   /**
    * @covers ::onContentChanged
    */
@@ -86,6 +91,71 @@ final class RevalidationSubscriberTest extends UnitTestCase {
 
     $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
     $subscriber->onContentChanged($this->createEvent());
+  }
+
+  /**
+   * @covers ::onContentChanged
+   */
+  public function testDoesNothingWhenUrlMissing(): void {
+    $configFactory = $this->createConfigFactory([
+      'revalidation.enabled' => TRUE,
+      'revalidation.url' => '',
+    ]);
+
+    $secrets = $this->createSecretManager($configFactory, 'secret');
+    $client = $this->createMock(ClientInterface::class);
+    $client->expects($this->never())->method('request');
+
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->never())->method('error');
+    $logger->expects($this->never())->method('warning');
+    $logger->expects($this->never())->method('info');
+
+    $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
+    $subscriber->onContentChanged($this->createEvent());
+  }
+
+  /**
+   * @covers ::isValidWebhookUrl
+   */
+  public function testIsValidWebhookUrlRejectsMalformedUrls(): void {
+    $configFactory = $this->createConfigFactory([]);
+    $secrets = $this->createSecretManager($configFactory, '');
+    $client = $this->createMock(ClientInterface::class);
+    $logger = $this->createMock(LoggerChannelInterface::class);
+
+    $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
+
+    $this->assertFalse($this->isValidWebhookUrl($subscriber, 'not-a-url'));
+    $this->assertFalse($this->isValidWebhookUrl($subscriber, 'https:///missing-host'));
+    $this->assertFalse($this->isValidWebhookUrl($subscriber, 'ftp://example.com/revalidate'));
+  }
+
+  /**
+   * @covers ::isValidWebhookUrl
+   */
+  public function testIsValidWebhookUrlRejectsPrivateIps(): void {
+    $configFactory = $this->createConfigFactory([]);
+    $secrets = $this->createSecretManager($configFactory, '');
+    $client = $this->createMock(ClientInterface::class);
+    $logger = $this->createMock(LoggerChannelInterface::class);
+
+    $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
+    $this->assertFalse($this->isValidWebhookUrl($subscriber, 'https://192.168.0.1/revalidate'));
+  }
+
+  /**
+   * @covers ::isValidWebhookUrl
+   */
+  public function testIsValidWebhookUrlAllowsPublicHostnames(): void {
+    $configFactory = $this->createConfigFactory([]);
+    $secrets = $this->createSecretManager($configFactory, '');
+    $client = $this->createMock(ClientInterface::class);
+    $logger = $this->createMock(LoggerChannelInterface::class);
+
+    $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
+
+    $this->assertTrue($this->isValidWebhookUrl($subscriber, 'https://example.com/revalidate'));
   }
 
   /**
@@ -190,6 +260,27 @@ final class RevalidationSubscriberTest extends UnitTestCase {
     $client->expects($this->once())->method('request')->willThrowException(
       new class('Boom') extends \Exception implements GuzzleException {},
     );
+
+    $logger = $this->createMock(LoggerChannelInterface::class);
+    $logger->expects($this->once())->method('error');
+
+    $subscriber = new RevalidationSubscriber($configFactory, $secrets, $client, $logger);
+    $subscriber->onContentChanged($this->createEvent());
+  }
+
+  /**
+   * @covers ::onContentChanged
+   */
+  public function testLogsErrorOnUnexpectedException(): void {
+    $configFactory = $this->createConfigFactory([
+      'revalidation.enabled' => TRUE,
+      'revalidation.url' => 'https://example.com/revalidate',
+    ]);
+
+    $secrets = $this->createSecretManager($configFactory, '');
+
+    $client = $this->createMock(ClientInterface::class);
+    $client->expects($this->once())->method('request')->willThrowException(new \RuntimeException('Boom'));
 
     $logger = $this->createMock(LoggerChannelInterface::class);
     $logger->expects($this->once())->method('error');

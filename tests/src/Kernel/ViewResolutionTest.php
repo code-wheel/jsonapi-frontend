@@ -97,6 +97,23 @@ final class ViewResolutionTest extends KernelTestBase {
     $this->assertSame('https://cms.example.com/blog', $result['drupal_url']);
   }
 
+  public function testEnableAllViewsMakesViewsHeadless(): void {
+    $this->config('jsonapi_frontend.settings')
+      ->set('enable_all_views', TRUE)
+      ->set('headless_views', [])
+      ->save();
+
+    /** @var \Drupal\jsonapi_frontend\Service\PathResolverInterface $resolver */
+    $resolver = $this->container->get('jsonapi_frontend.path_resolver');
+
+    $result = $resolver->resolve('/blog');
+
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('view', $result['kind']);
+    $this->assertTrue($result['headless']);
+    $this->assertNull($result['drupal_url']);
+  }
+
   private function createViewWithPageDisplay(string $id, string $path): void {
     $view = View::create([
       'id' => $id,

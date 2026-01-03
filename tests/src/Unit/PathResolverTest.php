@@ -418,4 +418,445 @@ class PathResolverTest extends UnitTestCase {
     $this->assertSame('entity', $result['kind']);
   }
 
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveReturnsNotFoundWhenJsonapiResourceTypeCannotBeBuilt(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $definition = $this->createMock(EntityTypeInterface::class);
+    $definition->method('entityClassImplements')->with(ContentEntityInterface::class)->willReturn(TRUE);
+    $entityTypeManager->method('getDefinition')->with('node', FALSE)->willReturn($definition);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $entityTypeManager->method('getStorage')->with('node')->willReturn($storage);
+
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('');
+    $entity->method('uuid')->willReturn('uuid');
+    $entity->method('access')->with('view')->willReturn(TRUE);
+
+    $storage->method('load')->with('1')->willReturn($entity);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => '1']));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => TRUE,
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/about-us')['resolved']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveUsesCurrentRequestHostWhenDrupalBaseUrlNotConfigured(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $definition = $this->createMock(EntityTypeInterface::class);
+    $definition->method('entityClassImplements')->with(ContentEntityInterface::class)->willReturn(TRUE);
+    $entityTypeManager->method('getDefinition')->with('node', FALSE)->willReturn($definition);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('uuid');
+    $entity->method('access')->with('view')->willReturn(TRUE);
+
+    $storage->method('load')->with('1')->willReturn($entity);
+    $entityTypeManager->method('getStorage')->with('node')->willReturn($storage);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => '1']));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => FALSE,
+      'headless_bundles' => [],
+      'drupal_base_url' => '',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+    $requestStack->method('getCurrentRequest')->willReturn(Request::create('https://current.example'));
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $result = $resolver->resolve('/about-us');
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('https://current.example/about-us', $result['drupal_url']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveViewRoutesReturnNotFoundWhenJsonapiViewsModuleMissing(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/blog');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('view.blog.page_1', []));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'redirect';
+    });
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/blog')['resolved']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveViewRoutesReturnNotFoundWhenViewsModuleMissing(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/blog');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('view.blog.page_1', []));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'jsonapi_views';
+    });
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/blog')['resolved']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveViewRoutesReturnNotFoundWhenRouteNameMalformed(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/blog');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('view.blog', []));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'jsonapi_views';
+    });
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/blog')['resolved']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveRedirectNormalizesInvalidStatusAndTargetPath(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->expects($this->never())->method('getPathByAlias');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->expects($this->never())->method('getUrlIfValid');
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $configFactory = $this->createMock(ConfigFactoryInterface::class);
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'redirect';
+    });
+
+    $redirectRepository = new class {
+      public function findMatchingRedirect(string $source_path, array $query = [], string $language = 'und'): object {
+        return new class {
+          public function getStatusCode(): int {
+            return 999;
+          }
+
+          public function getRedirectUrl(): object {
+            return new class {
+              public function toString(): string {
+                return 'new-path';
+              }
+            };
+          }
+        };
+      }
+    };
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      $redirectRepository,
+    );
+
+    $result = $resolver->resolve('/old-path?utm=1', 'en');
+
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('redirect', $result['kind']);
+    $this->assertSame('/old-path', $result['canonical']);
+    $this->assertSame([
+      'to' => '/new-path',
+      'status' => 301,
+    ], $result['redirect']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveRedirectIgnoresNonRedirectRepositoryObjects(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/does-not-exist');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn(NULL);
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturnCallback(static function (string $module): bool {
+      return $module === 'redirect';
+    });
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      new \stdClass(),
+    );
+
+    $this->assertFalse($resolver->resolve('/old-path', NULL)['resolved']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveUsesCurrentLanguageWhenFallbackIsCurrent(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
+
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('access')->with('view')->willReturn(TRUE);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('uuid');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => $entity]));
+
+    $current = $this->createMock(LanguageInterface::class);
+    $current->method('getId')->willReturn('fr');
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $languageManager->expects($this->once())
+      ->method('getCurrentLanguage')
+      ->with(LanguageInterface::TYPE_CONTENT)
+      ->willReturn($current);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'current',
+      'enable_all' => TRUE,
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $result = $resolver->resolve('/about-us');
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('fr', $result['entity']['langcode']);
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveReturnsNotFoundWhenNoEntityRouteParametersPresent(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', []));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/about-us')['resolved']);
+  }
+
 }

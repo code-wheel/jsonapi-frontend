@@ -113,6 +113,37 @@ final class RoutesFeedBuilderTest extends KernelTestBase {
     $this->assertNotNull($page2['next_cursor']);
   }
 
+  public function testInvalidCursorFallsBackToBeginning(): void {
+    /** @var \Drupal\jsonapi_frontend\Service\RoutesFeedBuilder $builder */
+    $builder = $this->container->get('jsonapi_frontend.routes_feed_builder');
+
+    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
+
+    // Base64("foo") is not valid JSON so cursor decoding should fail.
+    $result = $builder->getPage(1, 'Zm9v', NULL);
+    $this->assertCount(1, $result['items']);
+    $this->assertSame('/blog', $result['items'][0]['path']);
+  }
+
+  public function testEnableAllViewsSkipsDynamicPaths(): void {
+    $this->createViewWithPageDisplay('dynamic', '/blog/%');
+
+    $this->config('jsonapi_frontend.settings')
+      ->set('enable_all_views', TRUE)
+      ->save();
+
+    /** @var \Drupal\jsonapi_frontend\Service\RoutesFeedBuilder $builder */
+    $builder = $this->container->get('jsonapi_frontend.routes_feed_builder');
+
+    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
+
+    $page = $builder->getPage(10, NULL, NULL);
+    $paths = array_map(static fn (array $item): string => (string) ($item['path'] ?? ''), $page['items']);
+
+    $this->assertContains('/blog', $paths);
+    $this->assertNotContains('/blog/%', $paths);
+  }
+
   private function createViewWithPageDisplay(string $id, string $path): void {
     $view = View::create([
       'id' => $id,
@@ -163,4 +194,3 @@ final class RoutesFeedBuilderTest extends KernelTestBase {
   }
 
 }
-
