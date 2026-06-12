@@ -3,6 +3,14 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-06-12
+
+### Added
+
+- Drupal 12 compatibility: core constraints widened to `^10 || ^11 || ^12`
+  ([#3599397](https://www.drupal.org/project/jsonapi_frontend/issues/3599397)).
+  No API changes were required.
+
 ## [1.0.7] - 2026-01-02
 
 ### Added
